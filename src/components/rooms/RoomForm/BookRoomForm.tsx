@@ -5,10 +5,10 @@ import "react-phone-input-2/lib/style.css";
 
 interface CustomerFormInputs {
   name: string;
-  company: string;
+  cnic: string;
   email: string;
   phone: string;
-  amount: number;
+  bookings: number;
 }
 
 interface CustomerFormProps {
@@ -16,7 +16,7 @@ interface CustomerFormProps {
   close: () => void;
 }
 
-export default function VendorForm({ save, close }: CustomerFormProps) {
+export default function BookRoomForm({ save, close }: CustomerFormProps) {
   const {
     register,
     handleSubmit,
@@ -35,11 +35,14 @@ export default function VendorForm({ save, close }: CustomerFormProps) {
     close();
   };
 
+
+
+  
   return (
     
     <form onSubmit={handleSubmit(onSubmit)} className="p-4 space-y-4 bg-white rounded-md shadow-md dark:bg-gray-900 dark:text-white">
       <div className="font-bold text-lg">
-        New Vendor
+        Customer Info
       </div>
       <div className="w-full md:w-1/2">
         <label className="block mb-1 text-sm">Name</label>
@@ -50,17 +53,17 @@ export default function VendorForm({ save, close }: CustomerFormProps) {
         />
         {errors.name && <p className="text-red-400 text-sm">{errors.name.message}</p>}
       </div>
-
-      {/* Company */}
+      {/* CNIC */}
       <div className="w-full md:w-1/2">
-        <label className="block mb-1 text-sm">Company</label>
+        <label className="block mb-1 text-sm">CNIC</label>
         <input
           type="text"
-          {...register("company", { required: "Company is required" })}
+          {...register("cnic", { required: "CNIC is required" })}
           className="w-full border border-gray-300 p-2 rounded-lg"
         />
-        {errors.company && <p className="text-red-400 text-sm">{errors.company.message}</p>}
+        {errors.cnic && <p className="text-red-400 text-sm">{errors.cnic.message}</p>}
       </div>
+
 
       {/* Email */}
       <div className="w-full md:w-1/2">
@@ -111,18 +114,18 @@ export default function VendorForm({ save, close }: CustomerFormProps) {
       </div>
 
       {/* Amount */}
-      <div className="w-full md:w-1/2">
-        <label className="block mb-1 text-sm">Amount</label>
+      {/* <div className="w-full md:w-1/2">
+        <label className="block mb-1 text-sm">Total Bookings</label>
         <input
           type="number"
-          {...register("amount", {
-            required: "Amount is required",
-            min: { value: 1, message: "Amount must be greater than 0" },
+          {...register("bookings", {
+            required: "Total Booking is required",
+            min: { value: 1, message: "Bookings must be greater than 0" },
           })}
           className="w-full border border-gray-300 p-2 rounded-lg"
         />
-        {errors.amount && <p className="text-red-400 text-sm">{errors.amount.message}</p>}
-      </div>
+        {errors.bookings && <p className="text-red-400 text-sm">{errors.bookings.message}</p>}
+      </div> */}
 
       {/* Buttons */}
       <div className="flex justify-start gap-2 pt-4">

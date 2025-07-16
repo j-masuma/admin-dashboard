@@ -64,6 +64,13 @@ const navItems: NavItem[] = [
     ],
   },
   {
+    icon: <SlHandbag />,
+    name: "Rooms",
+    subItems: [
+      { name: "Rooms Details", path: "/rooms", pro: false },
+    ],
+  },
+  {
     name: "Forms",
     icon: <ListIcon />,
     subItems: [{ name: "Form Elements", path: "/form-elements", pro: false }],

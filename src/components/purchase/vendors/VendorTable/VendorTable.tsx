@@ -7,9 +7,9 @@ import {
   TableCell,
   TableHeader,
   TableRow,
-} from "../../ui/table";
+} from "../../../ui/table";
 import { useState, useRef, useEffect } from "react";
-import CustomerForm from "../../form/customer-form/CustomerForm";
+import VendorForm from "../VendorForm/VendorForm";
 
 
 interface Order {
@@ -65,7 +65,7 @@ const data: Order[] = [
   },
 ];
 
-export default function CustomerTable() {
+export default function VendorTable() {
   const [showForm, setShowForm] = useState(false);
   const [tableData, setTableData] = useState<Order[]>(data);
   const [openDropdownId, setOpenDropdownId] = useState<number | null>(null);
@@ -114,7 +114,7 @@ export default function CustomerTable() {
     <>
       <div className="flex justify-between items-center mb-2">
         <h2 className=" text-xl font-semibold text-gray-800 dark:text-white">
-          All Customers
+          All Vendors
         </h2>
         
         <button
@@ -124,7 +124,7 @@ export default function CustomerTable() {
            {<IoAdd />}  New
         </button>
       </div>
-      {showForm ? (<CustomerForm save={handleSaveForm} close={handleCloseForm}/>):(
+      {showForm ? (<VendorForm save={handleSaveForm} close={handleCloseForm}/>):(
         <div className="overflow-hidden h-96 rounded-md border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-gray-900">
           <div className="max-w-full overflow-x-auto">
             <Table>
@@ -173,8 +173,7 @@ export default function CustomerTable() {
                       <div>
                         <span className="block font-medium text-gray-800 text-theme-sm dark:text-white/90">
                           {order.name}
-                        </span>
-                        
+                        </span>  
                       </div>  
                     </TableCell>
                     <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
@@ -240,4 +239,13 @@ export default function CustomerTable() {
     </>
   );
 }
+
+
+
+
+
+
+
+
+
 

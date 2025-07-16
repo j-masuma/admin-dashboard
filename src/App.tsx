@@ -18,8 +18,13 @@ import Blank from "./pages/Blank";
 import AppLayout from "./layout/AppLayout";
 import { ScrollToTop } from "./components/common/ScrollToTop";
 import Home from "./pages/Dashboard/Home";
-import CustomerTable from "./components/tables/CustomerTables/CustomerTable";
-import VendorTable from "./components/vendors/VendorTable/VendorTable";
+import CustomerTable from "./components/sales/customers/CustomerTables/CustomerTable";
+import VendorTable from "./components/purchase/vendors/VendorTable/VendorTable";
+import Invoice from "./components/sales/invoice/Invoice";
+import ExpenseTable from "./components/purchase/expenses/ExpenseTable/ExpenseTable";
+import BookingDetails from "./components/sales/customers/BookingDetails/Booking Details";
+import RoomTable from "./components/rooms/RoomsTable/RoomsTable";
+import RoomDetails from "./components/rooms/RoomDetails/RoomDetails";
 
 export default function App() {
   return (
@@ -43,6 +48,14 @@ export default function App() {
             <Route path="/basic-tables" element={<BasicTables />} />
             <Route path="/customer-tables" element={<CustomerTable />} />
             <Route path="/vendor-tables" element={<VendorTable />} />
+            <Route path="/expenses" element={<ExpenseTable />} />
+            <Route path="/invoices" element={<Invoice />} />
+            <Route path="/rooms" element={<RoomTable />} />
+            <Route path="/details" element={<BookingDetails/>} />
+
+            {/* room */}
+            <Route path="/rooms" element={<RoomTable />} />
+            <Route path="/room-details/:roomId" element={<RoomDetails />} />
 
             {/* Ui Elements */}
             <Route path="/alerts" element={<Alerts />} />
