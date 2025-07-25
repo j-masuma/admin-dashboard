@@ -54,6 +54,7 @@ export default function App() {
             <Route path="/details" element={<BookingDetails/>} />
 
             {/* room */}
+            
             <Route path="/rooms" element={<RoomTable />} />
             <Route path="/room-details/:roomId" element={<RoomDetails />} />
 

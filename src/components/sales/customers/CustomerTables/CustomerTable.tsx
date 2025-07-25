@@ -171,7 +171,7 @@ export default function CustomerTable() {
       {showForm ? (
         <CustomerForm save={handleSaveForm} close={() => setShowForm(false)} />
       ) : (
-        <div className="overflow-hidden h-96 rounded-md border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-gray-900">
+        <div className="overflow-x-auto overflow-y-auto h-96 rounded-md border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-gray-900">
           {isLoading ? (
             <div className="flex items-center justify-center h-full">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -182,10 +182,12 @@ export default function CustomerTable() {
               <p className="text-gray-500 dark:text-gray-400">No customers found</p>
             </div>
           ) : (
-            <div className="max-w-full overflow-x-auto">
+            <div className="max-w-full h-full overflow-x-auto overflow-y-auto">
               <Table>
                 {/* Table Header */}
-                <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
+                <TableHeader
+                  className="border-b border-gray-100 dark:border-white/[0.05] sticky top-0 bg-white dark:bg-gray-900 z-10"
+                >
                   <TableRow>
                     <TableCell
                       isHeader
@@ -223,7 +225,12 @@ export default function CustomerTable() {
                     >
                       TOTAL BOOKINGS
                     </TableCell>
-                   
+                    <TableCell
+                      isHeader
+                      className="px-5 py-3 font-medium text-gray-500 text-end text-theme-xs dark:text-gray-400 whitespace-nowrap"
+                    >
+                      ACTIONS
+                    </TableCell>
                   </TableRow>
                 </TableHeader>
 
@@ -258,7 +265,7 @@ export default function CustomerTable() {
                           <button
                             onClick={() => toggleDropdown(order.id)}
                             disabled={isDeleting === order.id}
-                            className="cursor-pointer rounded-full bg-blue-500 items-center justify-center text-white w-6 h-6 flex disabled:opacity-50 hover:bg-blue-600 transition-colors"
+                            className="cursor-pointer rounded-full bg-blue-500 items-center justify-center text-white w-5 h-5 flex disabled:opacity-50 hover:bg-blue-600 transition-colors"
                           >
                             <IoIosArrowDown className={`transform transition-transform ${openDropdownId === order.id ? 'rotate-180' : ''}`} />
                           </button>

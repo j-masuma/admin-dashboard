@@ -10,8 +10,7 @@ import {
 import { useState, useEffect } from "react";
 import RoomForm from '../RoomForm/RoomForm';
 import RoomEditForm from '../RoomForm/RoomEditForm';
-import BookRoomForm from "../RoomForm/BookRoomForm";
-import { Link } from "react-router";
+import { Link } from "react-router-dom";
 
 interface Room {
   id: string;
@@ -98,8 +97,9 @@ const DeleteConfirmationModal = ({
 export default function RoomTable() {
   const [showForm, setShowForm] = useState(false);
   const [editingRoom, setEditingRoom] = useState<Room | null>(null);
-  const [bookingRoom, setBookingRoom] = useState<Room | null>(null);
   const [tableData, setTableData] = useState<Room[]>([]);
+  // Add a flag to trigger refresh after booking
+  const [shouldRefresh, setShouldRefresh] = useState(false);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
@@ -125,7 +125,7 @@ export default function RoomTable() {
       if (!target.closest('.dropdown-container')) {
         setOpenDropdownId(null);
       }
-    };
+  };
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -137,17 +137,13 @@ export default function RoomTable() {
     setError(null);
     try {
       const res = await fetch('https://api.sheetbest.com/sheets/72d038c4-48d2-4f11-9db7-f6dd4c90e828/tabs/rooms');
-     
       if (!res.ok) throw new Error('Failed to fetch data');
       const rawData = await res.json();
-      
-      // Convert string values to proper types
-      const processedData = rawData.map((room: any) => ({
+      const processedData = rawData.map((room: Room) => ({
         ...room,
         price: Number(room.price),
-        status: room.status as "Available" | "Booked" | "Maintenance", // ensure correct type
+        status: room.status as "Available" | "Booked" | "Maintenance",
       }));
-      
       setTableData(processedData || []);
     } catch (error) {
       console.error("Error fetching rooms data:", error);
@@ -156,6 +152,21 @@ export default function RoomTable() {
       setIsLoading(false);
     }
   };
+
+  // Refresh table after booking
+  useEffect(() => {
+    if (shouldRefresh) {
+      getData();
+      setShouldRefresh(false);
+    }
+  }, [shouldRefresh]);
+
+  
+  useEffect(() => {
+    getData();
+  }, []);
+
+  
 
   // Open delete confirmation modal
   const openDeleteModal = (roomId: string, roomName: string) => {
@@ -245,86 +256,6 @@ export default function RoomTable() {
     }
   };
 
-
-  const handleBookRoom = (room : Room)=>{
-    setBookingRoom(room);
-    setOpenDropdownId(null);
-  }
-
-  // Handle booking save
-  const handleBookingSave = async (bookingData: any) => {
-    if (!bookingRoom) return;
-
-    try {
-      // First, get existing customers to generate proper ID
-      const customersResponse = await fetch('https://api.sheetbest.com/sheets/72d038c4-48d2-4f11-9db7-f6dd4c90e828/tabs/customers');
-      let maxCustomerId = 0;
-      
-      if (customersResponse.ok) {
-        const existingCustomers = await customersResponse.json();
-        if (existingCustomers && existingCustomers.length > 0) {
-          maxCustomerId = Math.max(...existingCustomers.map((customer: any) => Number(customer.id) || 0));
-        }
-      }
-
-      // Update room availability to false (booked)
-      const updatedRoomData = {
-        ...bookingRoom,
-        availability: false,
-      };
-
-      // Update room availability in the sheet
-      const roomResponse = await fetch(`https://api.sheetbest.com/sheets/72d038c4-48d2-4f11-9db7-f6dd4c90e828/tabs/rooms/id/${bookingRoom.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(updatedRoomData),
-      });
-
-      // Save booking data to customers table with proper ID
-      const bookingPayload = {
-        id: maxCustomerId + 1, 
-        name: bookingData.name, 
-        cnic: bookingData.cnic || '', 
-        email: bookingData.email, 
-        phone: bookingData.phone, 
-        bookings: 1, 
-        roomId: bookingRoom.id,
-        roomName: bookingRoom.name,
-        roomType: bookingRoom.type,
-        roomPrice: bookingRoom.price,
-        checkInDate: bookingData.checkInDate,
-        checkOutDate: bookingData.checkOutDate,
-        bookingId: `BK${Date.now()}`,
-      };
-
-      const bookingResponse = await fetch('https://api.sheetbest.com/sheets/72d038c4-48d2-4f11-9db7-f6dd4c90e828/tabs/customers', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(bookingPayload),
-      });
-
-      if (roomResponse.ok && bookingResponse.ok) {
-        // Update local state
-        setTableData((prevData) => 
-          prevData.map((room) => 
-            room.id === bookingRoom.id ? updatedRoomData : room
-          )
-        );
-        setBookingRoom(null);
-        console.log('Room booked successfully');
-        alert(`Room booked successfully! Customer ID: ${bookingPayload.id}`);
-      } else {
-        throw new Error('Failed to book room');
-      }
-    } catch (error) {
-      console.error('Error booking room:', error);
-      alert('Failed to book room. Please try again.');
-    }
-  }
   // Handle edit room
   const handleEditRoom = (room: Room) => {
     setEditingRoom(room);
@@ -381,10 +312,6 @@ export default function RoomTable() {
     getData();
   };
 
-  useEffect(() => {
-    getData();
-  }, []);
-  
   return (
     <>
       <div className="flex justify-between items-center mb-4">
@@ -424,14 +351,8 @@ export default function RoomTable() {
           close={() => setEditingRoom(null)}
           isEditing={true}
         />
-      ) : bookingRoom ? (
-        <BookRoomForm 
-          
-          save={handleBookingSave}
-          close={() => setBookingRoom(null)}
-        />
       ) : (
-        <div className="overflow-hidden h-96 rounded-md border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-gray-900">
+        <div className="overflow-x-auto h-96 rounded-md border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-gray-900">
           {isLoading ? (
             <div className="flex items-center justify-center h-full">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -442,9 +363,9 @@ export default function RoomTable() {
               <p className="text-gray-500 dark:text-gray-400">No rooms found</p>
             </div>
           ) : (
-            <div className="max-w-full overflow-x-auto">
+            <div className="max-w-full h-full overflow-x-auto overflow-y-auto">
               <Table>
-                <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
+                <TableHeader className="border-b border-gray-100 dark:border-white/[0.05] sticky top-0 bg-white dark:bg-gray-900 z-20">
                   <TableRow>
                     <TableCell
                       isHeader
@@ -476,7 +397,12 @@ export default function RoomTable() {
                     >
                       AVAILABILITY
                     </TableCell>
-                    
+                    <TableCell
+                      isHeader
+                      className="px-5 py-3 font-medium text-gray-500 text-end text-theme-xs dark:text-gray-400 whitespace-nowrap"
+                    >
+                      ACTIONS
+                    </TableCell>
                   </TableRow>
                 </TableHeader>
 
@@ -520,7 +446,7 @@ export default function RoomTable() {
                           <button
                             onClick={() => toggleDropdown(room.id)}
                             disabled={isDeleting === room.id}
-                            className="cursor-pointer rounded-full bg-blue-500 items-center justify-center text-white w-8 h-8 flex disabled:opacity-50 hover:bg-blue-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+                            className="cursor-pointer rounded-full bg-blue-500 items-center justify-center text-white w-5 h-5 flex disabled:opacity-50 hover:bg-blue-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
                           >
                             <IoIosArrowDown className={`transform transition-transform ${openDropdownId === room.id ? 'rotate-180' : ''}`} />
                           </button>
@@ -528,17 +454,19 @@ export default function RoomTable() {
                           {openDropdownId === room.id && (
                             <div className="origin-top-right absolute right-0 mt-2 w-36 rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 z-50 border dark:border-gray-700">
                               <div className="py-1">
-                                <button 
-                                  className={`w-full text-left block px-4 py-2 text-sm transition-colors focus:outline-none ${
-                                    room.status === "Available"
-                                      ? 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 focus:bg-gray-100 dark:focus:bg-gray-700' 
-                                      : 'text-gray-400 dark:text-gray-500 cursor-not-allowed'
-                                  }`}
-                                  onClick={() => room.status === "Available" && handleBookRoom(room)}
-                                  disabled={room.status !== "Available"}
-                                >
-                                  {room.status === "Available" ? 'Book' : room.status}
-                                </button>
+                                {room.status === "Available" ? (
+                                  <Link
+                                    to={`/room-details/${room.id}`}
+                                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                                  >
+                                    Book
+                                  </Link>
+                                ) : (
+                                  <div className="block w-full px-4 py-2 text-sm text-gray-400 dark:text-gray-500 cursor-not-allowed">
+                                    {room.status}
+                                  </div>
+                                )}
+
                                 <button 
                                   className="w-full text-left block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:bg-gray-100 dark:focus:bg-gray-700"
                                   onClick={() => handleEditRoom(room)}
