@@ -1,4 +1,4 @@
-import { IoAdd, IoRefresh } from "react-icons/io5";
+import {IoRefresh } from "react-icons/io5";
 import { IoIosArrowDown } from "react-icons/io";
 import {
   Table,
@@ -8,7 +8,6 @@ import {
   TableRow,
 } from "../../../ui/table";
 import { useState, useEffect } from "react";
-import CustomerForm from "../CustomerForm/CustomerForm";
 import { Link } from "react-router";
 
 interface Order {
@@ -21,13 +20,13 @@ interface Order {
 }
 
 export default function CustomerTable() {
-  const [showForm, setShowForm] = useState(false);
+  
   const [tableData, setTableData] = useState<Order[]>([]);
   const [openDropdownId, setOpenDropdownId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isDeleting, setIsDeleting] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
-
+  const BASE_URL = import.meta.env.VITE_BASE_URL
   const toggleDropdown = (id: number) => {
     setOpenDropdownId((prevId) => (prevId === id ? null : id));
   };
@@ -50,7 +49,7 @@ export default function CustomerTable() {
     setIsLoading(true);
     setError(null);
     try {
-      const res = await fetch('https://api.sheetbest.com/sheets/72d038c4-48d2-4f11-9db7-f6dd4c90e828');
+      const res = await fetch(`${BASE_URL}/customers`);
       if (!res.ok) throw new Error('Failed to fetch data');
       const data = await res.json();
       setTableData(data || []);
@@ -93,41 +92,41 @@ export default function CustomerTable() {
   };
 
   // Improved handleSaveForm
-  const handleSaveForm = async (formData: {
-    name: string;
-    cnic: string;
-    email: string;
-    phone: string;
-    bookings: number;
-  }) => {
-    try {
-      // Generate proper ID based on existing data
-      const maxId = tableData.length > 0 ? Math.max(...tableData.map(item => item.id)) : 0;
-      const newCustomerData = {
-        id: maxId + 1,
-        ...formData,
-      };
+  // const handleSaveForm = async (formData: {
+  //   name: string;
+  //   cnic: string;
+  //   email: string;
+  //   phone: string;
+  //   bookings: number;
+  // }) => {
+  //   try {
+  //     // Generate proper ID based on existing data
+  //     const maxId = tableData.length > 0 ? Math.max(...tableData.map(item => item.id)) : 0;
+  //     const newCustomerData = {
+  //       id: maxId + 1,
+  //       ...formData,
+  //     };
 
-      const response = await fetch('https://api.sheetbest.com/sheets/72d038c4-48d2-4f11-9db7-f6dd4c90e828', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(newCustomerData),
-      });
+  //     const response = await fetch('https://api.sheetbest.com/sheets/72d038c4-48d2-4f11-9db7-f6dd4c90e828', {
+  //       method: 'POST',
+  //       headers: {
+  //         'Content-Type': 'application/json',
+  //       },
+  //       body: JSON.stringify(newCustomerData),
+  //     });
 
-      if (response.ok) {
-        setTableData((prevData) => [...prevData, newCustomerData]);
-        setShowForm(false);
-        console.log('Customer added successfully');
-      } else {
-        throw new Error('Failed to save customer');
-      }
-    } catch (error) {
-      console.error('Error saving data:', error);
-      alert('Failed to save customer data. Please try again.');
-    }
-  };
+  //     if (response.ok) {
+  //       setTableData((prevData) => [newCustomerData, ...prevData]);
+  //       setShowForm(false);
+  //       console.log('Customer added successfully');
+  //     } else {
+  //       throw new Error('Failed to save customer');
+  //     }
+  //   } catch (error) {
+  //     console.error('Error saving data:', error);
+  //     alert('Failed to save customer data. Please try again.');
+  //   }
+  // };
 
   // Add refresh functionality
   const handleRefresh = () => {
@@ -159,150 +158,131 @@ export default function CustomerTable() {
             <IoRefresh className={isLoading ? 'animate-spin' : ''} />
             Refresh
           </button>
-          <button
-            onClick={() => setShowForm(true)}
-            className="flex gap-1 items-center px-4 py-2 bg-blue-600 rounded-md text-white text-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
-          >
-            <IoAdd /> New
-          </button>
+          
         </div>
       </div>
 
-      {showForm ? (
-        <CustomerForm save={handleSaveForm} close={() => setShowForm(false)} />
-      ) : (
-        <div className="overflow-x-auto overflow-y-auto h-96 rounded-md border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-gray-900">
-          {isLoading ? (
-            <div className="flex items-center justify-center h-full">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-              <span className="ml-2 text-gray-600 dark:text-gray-400">Loading...</span>
-            </div>
-          ) : tableData.length === 0 ? (
-            <div className="flex items-center justify-center h-full">
-              <p className="text-gray-500 dark:text-gray-400">No customers found</p>
-            </div>
-          ) : (
-            <div className="max-w-full h-full overflow-x-auto overflow-y-auto">
-              <Table>
-                {/* Table Header */}
-                <TableHeader
-                  className="border-b border-gray-100 dark:border-white/[0.05] sticky top-0 bg-white dark:bg-gray-900 z-10"
-                >
-                  <TableRow>
-                    <TableCell
-                      isHeader
-                      className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                    >
-                      S.no#
-                    </TableCell>
-                    <TableCell
-                      isHeader
-                      className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                    >
-                      NAME
-                    </TableCell>
-                    <TableCell
-                      isHeader
-                      className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                    >
-                      CNIC
-                    </TableCell>
-                    <TableCell
-                      isHeader
-                      className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                    >
-                      EMAIL
-                    </TableCell>
-                    <TableCell
-                      isHeader
-                      className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                    >
-                      PHONE
-                    </TableCell>
-                    <TableCell
-                      isHeader
-                      className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                    >
-                      TOTAL BOOKINGS
-                    </TableCell>
-                    <TableCell
-                      isHeader
-                      className="px-5 py-3 font-medium text-gray-500 text-end text-theme-xs dark:text-gray-400 whitespace-nowrap"
-                    >
-                      ACTIONS
-                    </TableCell>
-                  </TableRow>
-                </TableHeader>
+      
+      <div className="max-w-full h-full overflow-x-auto overflow-y-auto">
+        <Table>
+          {/* Table Header */}
+          <TableHeader
+            className="border-b border-gray-100 dark:border-white/[0.05] sticky top-0 bg-white dark:bg-gray-900 z-10"
+          >
+            <TableRow>
+              <TableCell
+                isHeader
+                className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+              >
+                S.no#
+              </TableCell>
+              <TableCell
+                isHeader
+                className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+              >
+                NAME
+              </TableCell>
+              <TableCell
+                isHeader
+                className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+              >
+                CNIC
+              </TableCell>
+              <TableCell
+                isHeader
+                className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+              >
+                EMAIL
+              </TableCell>
+              <TableCell
+                isHeader
+                className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+              >
+                PHONE
+              </TableCell>
+              <TableCell
+                isHeader
+                className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+              >
+                TOTAL BOOKINGS
+              </TableCell>
+              <TableCell
+                isHeader
+                className="px-5 py-3 font-medium text-gray-500 text-end text-theme-xs dark:text-gray-400 whitespace-nowrap"
+              >
+                ACTIONS
+              </TableCell>
+            </TableRow>
+          </TableHeader>
 
-                {/* Table Body */}
-                <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
-                  {tableData.map((order) => (
-                    <TableRow key={order.id} className={isDeleting === order.id ? 'opacity-50' : ''}>
-                      <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                        {order.id}
-                      </TableCell>
-                      <TableCell className="px-5 py-4 sm:px-6 text-start">    
-                        <div>
-                          <span className="block font-medium text-gray-800 text-theme-sm dark:text-white/90">
-                            <Link to={'/details'}>{order.name}</Link>
-                          </span>
-                        </div>  
-                      </TableCell>
-                      <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                        {order.cnic}
-                      </TableCell>
-                      <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                        {order.email}
-                      </TableCell>
-                      <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                        {order.phone}
-                      </TableCell>
-                      <TableCell className="px-4 py-3 text-gray-500 text-theme-sm dark:text-gray-400">
-                        {order.bookings} 
-                      </TableCell>
-                      <TableCell className="relative px-4 py-3 text-end">
-                        <div className="relative inline-block dropdown-container">
-                          <button
-                            onClick={() => toggleDropdown(order.id)}
-                            disabled={isDeleting === order.id}
-                            className="cursor-pointer rounded-full bg-blue-500 items-center justify-center text-white w-5 h-5 flex disabled:opacity-50 hover:bg-blue-600 transition-colors"
+          {/* Table Body */}
+          <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
+            {tableData.map((order) => (
+              <TableRow key={order.id} className={isDeleting === order.id ? 'opacity-50' : ''}>
+                <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                  {order.id}
+                </TableCell>
+                <TableCell className="px-5 py-4 sm:px-6 text-start">    
+                  <div>
+                    <span className="block font-medium text-gray-800 text-theme-sm dark:text-white/90">
+                      <Link to={'/details'}>{order.name}</Link>
+                    </span>
+                  </div>  
+                </TableCell>
+                <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                  {order.cnic}
+                </TableCell>
+                <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                  {order.email}
+                </TableCell>
+                <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                  {order.phone}
+                </TableCell>
+                <TableCell className="px-4 py-3 text-gray-500 text-theme-sm dark:text-gray-400">
+                  {order.bookings} 
+                </TableCell>
+                <TableCell className="relative px-4 py-3 text-end">
+                  <div className="relative inline-block dropdown-container">
+                    <button
+                      onClick={() => toggleDropdown(order.id)}
+                      disabled={isDeleting === order.id}
+                      className="cursor-pointer rounded-full bg-blue-500 items-center justify-center text-white w-5 h-5 flex disabled:opacity-50 hover:bg-blue-600 transition-colors"
+                    >
+                      <IoIosArrowDown className={`transform transition-transform ${openDropdownId === order.id ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    {openDropdownId === order.id && (
+                      <div className="origin-top-right absolute right-0 mt-2 w-32 rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 z-20">
+                        <div className="py-1">
+                          <button 
+                            className="w-full text-left block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                            onClick={() => {
+                              setOpenDropdownId(null);
+                              // Add edit functionality here
+                              console.log('Edit customer:', order.id);
+                            }}
                           >
-                            <IoIosArrowDown className={`transform transition-transform ${openDropdownId === order.id ? 'rotate-180' : ''}`} />
+                            Edit
                           </button>
-
-                          {openDropdownId === order.id && (
-                            <div className="origin-top-right absolute right-0 mt-2 w-32 rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 z-20">
-                              <div className="py-1">
-                                <button 
-                                  className="w-full text-left block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                                  onClick={() => {
-                                    setOpenDropdownId(null);
-                                    // Add edit functionality here
-                                    console.log('Edit customer:', order.id);
-                                  }}
-                                >
-                                  Edit
-                                </button>
-                                <button 
-                                  onClick={() => handleDelete(order.id)}
-                                  disabled={isDeleting === order.id}
-                                  className="w-full text-left block px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 transition-colors"
-                                >
-                                  {isDeleting === order.id ? 'Deleting...' : 'Delete'}
-                                </button>
-                              </div>
-                            </div>
-                          )}
+                          <button 
+                            onClick={() => handleDelete(order.id)}
+                            disabled={isDeleting === order.id}
+                            className="w-full text-left block px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 transition-colors"
+                          >
+                            {isDeleting === order.id ? 'Deleting...' : 'Delete'}
+                          </button>
                         </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </div>
-      )}
+                      </div>
+                    )}
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+          
+      
     </>
   );
 }

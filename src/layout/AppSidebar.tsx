@@ -1,21 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router";
 import { FiShoppingCart } from "react-icons/fi";
-import { SlHandbag } from "react-icons/sl";
+import { MdOutlineBedroomParent } from "react-icons/md";
+
 
 // Assume these icons are imported from an icon library
 import {
-  BoxCubeIcon,
-  CalenderIcon,
   ChevronDownIcon,
   GridIcon,
   HorizontaLDots,
-  ListIcon,
-  PageIcon,
-  PieChartIcon,
-  PlugInIcon,
-  TableIcon,
-  UserCircleIcon,
 } from "../icons";
 import { useSidebar } from "../context/SidebarContext";
 
@@ -30,95 +23,59 @@ const navItems: NavItem[] = [
   {
     icon: <GridIcon />,
     name: "Dashboard",
-    subItems: [{ name: "Ecommerce", path: "/", pro: false }],
+    path: "/"
   },
-  {
-    icon: <CalenderIcon />,
-    name: "Calendar",
-    path: "/calendar",
-  },
-  {
-    icon: <UserCircleIcon />,
-    name: "User Profile",
-    path: "/profile",
-  },
+  
+  
   {
     icon: <FiShoppingCart />,
     name: "Sales",
     subItems: [
       { name: "Customers", path: "/customer-tables", pro: false },
-      { name: "Invoices", path: "/invoices", pro: false },
-      { name: "Sales Reciept", path: "/sales-reciept", pro: false },
-      { name: "Payment Received", path: "/payment-received", pro: false },
+      // { name: "Invoices", path: "/invoices", pro: false },
+      { name: "All Bookings", path: "/bookings", pro: false },
+      // { name: "Payment Received", path: "/payment-received", pro: false },
     ],
     
   },
-  {
-    icon: <SlHandbag />,
-    name: "Purchases",
-    subItems: [
-      { name: "Vendors", path: "/vendor-tables", pro: false },
-      { name: "Expenses", path: "/expenses", pro: false },
-      { name: "Bills", path: "/bills", pro: false },
+  // {
+  //   icon: <SlHandbag />,
+  //   name: "Purchases",
+  //   subItems: [
+  //     { name: "Vendors", path: "/vendor-tables", pro: false },
+  //     { name: "Expenses", path: "/expenses", pro: false },
+  //     { name: "Bills", path: "/bills", pro: false },
 
-    ],
-  },
+  //   ],
+  // },
   {
-    icon: <SlHandbag />,
+    icon: <MdOutlineBedroomParent />
+,
     name: "Rooms",
     subItems: [
       { name: "Rooms Details", path: "/rooms", pro: false },
     ],
   },
-  {
-    name: "Forms",
-    icon: <ListIcon />,
-    subItems: [{ name: "Form Elements", path: "/form-elements", pro: false }],
-  },
-  {
-    name: "Tables",
-    icon: <TableIcon />,
-    subItems: [{ name: "Basic Tables", path: "/basic-tables", pro: false }],
-  },
-  {
-    name: "Pages",
-    icon: <PageIcon />,
-    subItems: [
-      { name: "Blank Page", path: "/blank", pro: false },
-      { name: "404 Error", path: "/error-404", pro: false },
-    ],
-  },
+  
+  // {
+  //   name: "Tables",
+  //   icon: <TableIcon />,
+  //   subItems: [{ name: "Basic Tables", path: "/basic-tables", pro: false }],
+  // },
+  
 ];
 
 const othersItems: NavItem[] = [
-  {
-    icon: <PieChartIcon />,
-    name: "Charts",
-    subItems: [
-      { name: "Line Chart", path: "/line-chart", pro: false },
-      { name: "Bar Chart", path: "/bar-chart", pro: false },
-    ],
-  },
-  {
-    icon: <BoxCubeIcon />,
-    name: "UI Elements",
-    subItems: [
-      { name: "Alerts", path: "/alerts", pro: false },
-      { name: "Avatar", path: "/avatars", pro: false },
-      { name: "Badge", path: "/badge", pro: false },
-      { name: "Buttons", path: "/buttons", pro: false },
-      { name: "Images", path: "/images", pro: false },
-      { name: "Videos", path: "/videos", pro: false },
-    ],
-  },
-  {
-    icon: <PlugInIcon />,
-    name: "Authentication",
-    subItems: [
-      { name: "Sign In", path: "/signin", pro: false },
-      { name: "Sign Up", path: "/signup", pro: false },
-    ],
-  },
+
+  
+  // {
+  //   icon: <PlugInIcon />,
+  //   name: "Authentication",
+  //   subItems: [
+  //     { name: "Sign In", path: "/signin", pro: false },
+  //     { name: "Sign Up", path: "/signup", pro: false },
+  //   ],
+  // },
 ];
 
 const AppSidebar: React.FC = () => {
@@ -334,22 +291,17 @@ const AppSidebar: React.FC = () => {
       >
         <Link to="/">
           {isExpanded || isHovered || isMobileOpen ? (
-            <>
+            <div className="flex items-center gap-2">
               <img
-                className="dark:hidden"
-                src="/images/logo/logo.svg"
+                className=""
+                src="/images/logo/logo-icon.png"
                 alt="Logo"
-                width={150}
-                height={40}
+                width={25}
+                height={25}
               />
-              <img
-                className="hidden dark:block"
-                src="/images/logo/logo-dark.svg"
-                alt="Logo"
-                width={150}
-                height={40}
-              />
-            </>
+              <p className="text-2xl font-semibold dark:text-gray-200">HotelDel</p>
+              
+            </div>
           ) : (
             <img
               src="/images/logo/logo-icon.svg"

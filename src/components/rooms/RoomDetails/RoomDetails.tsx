@@ -1,19 +1,7 @@
 
 import { useParams, Link, useNavigate } from "react-router-dom";
-
 import { useState, useEffect, useRef } from "react";
-import {
-  IoArrowBack,
-  IoCalendar,
-  IoPeople,
-  IoHome,
-  IoPricetag,
-  IoCalendarOutline,
-  IoPersonCircle,
-  IoMail,
-  IoCall,
-  IoKey,
-} from "react-icons/io5";
+import { IoArrowBack, IoCalendar, IoPeople, IoHome, IoPricetag, IoCalendarOutline, IoPersonCircle, IoMail, IoCall, IoKey } from "react-icons/io5";
 import BookRoomForm from "../RoomForm/BookRoomForm";
 import { useBooking } from "../../../context/bookingContext";
 
@@ -39,26 +27,33 @@ interface Customer {
   bookingId: string;
 }
 
+interface BookingData {
+  name: string;
+  email: string;
+  phone: string;
+  cnic: string;
+  checkInDate: string;
+  checkOutDate: string;
+  recieveables: number;
+}
+
 export default function RoomDetails() {
   const { roomId } = useParams<{ roomId: string }>();
   const [room, setRoom] = useState<Room | null>(null);
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  // Date fields for quick booking
   const [checkInDate, setCheckInDate] = useState("");
   const [checkOutDate, setCheckOutDate] = useState("");
   const [dateError, setDateError] = useState("");
   const [showBookForm, setShowBookForm] = useState(false);
-
-  // Refs for date inputs to trigger calendar
+  const [noOfGuests, setNoOfGuests] = useState(1);
   const checkInRef = useRef<HTMLInputElement>(null);
   const checkOutRef = useRef<HTMLInputElement>(null);
 
-  // Booking context
-  const { bookingRoom,openBooking, closeBooking, handleBookingSave } = useBooking();
-
-  // Get today's date in YYYY-MM-DD format
+  const BASE_URL = import.meta.env.VITE_BASE_URL
+  const { bookingRoom, openBooking, closeBooking, handleBookingSave } = useBooking();
+  const navigate = useNavigate();
   const today = new Date().toISOString().split("T")[0];
 
   useEffect(() => {
@@ -69,14 +64,11 @@ export default function RoomDetails() {
       setError(null);
 
       try {
-        // Fetch room data
         const roomResponse = await fetch(
-          `https://api.sheetbest.com/sheets/72d038c4-48d2-4f11-9db7-f6dd4c90e828/tabs/rooms/id/${roomId}`
+          `${BASE_URL}/rooms/id/${roomId}`
         );
 
-        if (!roomResponse.ok) {
-          throw new Error("Room not found");
-        }
+        if (!roomResponse.ok) throw new Error("Room not found");
 
         const roomData = await roomResponse.json();
         const processedRoom = Array.isArray(roomData) ? roomData[0] : roomData;
@@ -87,17 +79,14 @@ export default function RoomDetails() {
           status: processedRoom.status,
         });
 
-        // If room is booked, fetch customer data
         if (processedRoom.status === "Booked") {
           const customerResponse = await fetch(
-            "https://api.sheetbest.com/sheets/72d038c4-48d2-4f11-9db7-f6dd4c90e828/tabs/customers"
+           `${BASE_URL}/tabs/customers`
           );
 
           if (customerResponse.ok) {
             const customers = await customerResponse.json();
-            const roomCustomer = customers.find(
-              (c: Customer) => c.roomId === roomId
-            );
+            const roomCustomer = customers.find((c: Customer) => c.roomId === roomId);
             setCustomer(roomCustomer || null);
           }
         }
@@ -112,23 +101,16 @@ export default function RoomDetails() {
     fetchRoomDetails();
   }, [roomId]);
 
-  // Function to trigger calendar for check-in date
   const openCheckInCalendar = () => {
-    if (checkInRef.current) {
-      checkInRef.current.focus();
-      checkInRef.current.showPicker?.();
-    }
+    checkInRef.current?.focus();
+    checkInRef.current?.showPicker?.();
   };
 
-  // Function to trigger calendar for check-out date
   const openCheckOutCalendar = () => {
-    if (checkOutRef.current) {
-      checkOutRef.current.focus();
-      checkOutRef.current.showPicker?.();
-    }
+    checkOutRef.current?.focus();
+    checkOutRef.current?.showPicker?.();
   };
 
-  // Validate dates
   const validateDates = () => {
     setDateError("");
 
@@ -148,7 +130,6 @@ export default function RoomDetails() {
     return true;
   };
 
-  // Calculate number of nights and total price
   const calculateStay = () => {
     if (!checkInDate || !checkOutDate || !room) return null;
 
@@ -167,37 +148,25 @@ export default function RoomDetails() {
 
   const stayDetails = calculateStay();
 
-  // Handle book room with pre-filled dates
   const handleQuickBook = () => {
     if (!validateDates()) return;
     setShowBookForm(true);
     if (room) openBooking(room);
   };
 
-  interface BookingData {
-    name: string;
-    email: string;
-    phone: string;
-    cnic: string;
-    checkInDate: string;
-    checkOutDate: string;
-    recieveables: number;
-  }
-  const navigate = useNavigate();
-
-  const handleBookingSaveWithRefresh = async (data: BookingData) => {
-    if (!stayDetails) return;
-     await handleBookingSave({
-    ...data,
-    recieveables: stayDetails.totalPrice,
-  });
-
-     navigate("/rooms");
+  const handleBookingSaveWithRefresh = async (data: BookingData | BookingData[]) => {
+    try {
+      const guests = Array.isArray(data) ? data : [data];
+      await handleBookingSave(guests);
+      navigate("/rooms");
+    } catch (error) {
+      console.error("Booking failed:", error);
+    }
   };
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br  ">
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
         <span className="ml-3 text-gray-600 dark:text-gray-400">
           Loading room details...
@@ -225,7 +194,6 @@ export default function RoomDetails() {
     );
   }
 
-  // Show BookRoomForm if requested
   if (showBookForm && bookingRoom) {
     return (
       <BookRoomForm
@@ -236,14 +204,15 @@ export default function RoomDetails() {
         }}
         initialCheckInDate={checkInDate}
         initialCheckOutDate={checkOutDate}
+        totalGuests={Number(noOfGuests) || 1}
+        roomPrice={room?.price || 0}
       />
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br   py-10">
+    <div className="min-h-screen bg-gradient-to-br py-10">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
         <div className="mb-10 flex items-center justify-between">
           <Link
             to="/rooms"
@@ -265,9 +234,7 @@ export default function RoomDetails() {
           </span>
         </div>
 
-        {/* Room Info & Booking */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Room Details Card */}
           <div className="col-span-2 bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 border border-blue-100 dark:border-gray-700">
             <div className="flex items-center gap-4 mb-6">
               <IoKey className="text-blue-500 dark:text-blue-400" size={32} />
@@ -310,9 +277,7 @@ export default function RoomDetails() {
             </div>
           </div>
 
-          {/* Booking / Guest Card */}
           <div>
-            {/* Customer Information Card (if booked) */}
             {room.status === "Booked" && customer && (
               <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 border border-blue-100 dark:border-gray-700 mb-8">
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
@@ -367,15 +332,27 @@ export default function RoomDetails() {
               </div>
             )}
 
-            {/* Quick Booking Card (if available) */}
             {room.status === "Available" && (
               <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 border border-blue-100 dark:border-gray-700">
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
                   <IoCalendarOutline className="text-blue-400" size={24} />
                   Quick Booking
                 </h2>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    No of Guests
+                  </label>
+                  <input
+                    type="number"
+                    value={noOfGuests}
+                    onChange={(e) => setNoOfGuests(Number(e.target.value) || 1)}
+                    min={1}
+                    className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  />
+                </div>
+
                 <div className="space-y-4">
-                  {/* Check-in Date */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Check-in Date
@@ -399,7 +376,6 @@ export default function RoomDetails() {
                     </div>
                   </div>
 
-                  {/* Check-out Date */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Check-out Date
@@ -423,7 +399,6 @@ export default function RoomDetails() {
                     </div>
                   </div>
 
-                  {/* Stay Summary */}
                   {stayDetails && (
                     <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-100 dark:border-blue-700">
                       <h3 className="text-sm font-medium text-blue-900 dark:text-blue-300 mb-2">
@@ -449,14 +424,12 @@ export default function RoomDetails() {
                     </div>
                   )}
 
-                  {/* Error Message */}
                   {dateError && (
                     <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-400 px-4 py-3 rounded-md text-sm">
                       {dateError}
                     </div>
                   )}
 
-                  {/* Action Buttons */}
                   <div className="flex pt-2">
                     <button
                       onClick={handleQuickBook}
@@ -465,7 +438,6 @@ export default function RoomDetails() {
                     >
                       Book This Room
                     </button>
-                    
                   </div>
                 </div>
               </div>

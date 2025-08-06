@@ -1,3 +1,5 @@
+/* eslint-disable react-hooks/exhaustive-deps */
+
 import { IoAdd, IoRefresh } from "react-icons/io5";
 import { IoIosArrowDown, IoMdWarning } from "react-icons/io";
 import {
@@ -19,7 +21,7 @@ interface Room {
   room_no: number;
   price: number;
   description: string;
-  status: "Available" | "Booked" | "Maintenance"; // <-- updated
+  status: "Available" | "Booked" | "Maintenance";
 }
 
 interface DeleteConfirmationModalProps {
@@ -94,21 +96,78 @@ const DeleteConfirmationModal = ({
   );
 };
 
+// Utility function to check and update room statuses
+const checkAndUpdateRoomStatuses = async (currentRooms: Room[]) => {
+  try {
+    // Fetch all bookings
+    const bookingsRes = await fetch(
+      'https://api.sheetbest.com/sheets/72d038c4-48d2-4f11-9db7-f6dd4c90e828/tabs/bookings'
+    );
+    if (!bookingsRes.ok) throw new Error('Failed to fetch bookings');
+    
+    const bookings = await bookingsRes.json();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Find rooms that should be available
+    const roomsToUpdate = currentRooms.filter(room => {
+      if (room.status !== "Booked") return false;
+      
+      // Find booking for this room
+      const roomBooking = bookings.find(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (booking: any) => booking.room_no === room.room_no && booking.status === "Booked"
+      );
+      
+      if (!roomBooking) return false;
+      
+      // Check if checkout date has passed
+      const checkoutDate = new Date(roomBooking.check_out_date);
+      checkoutDate.setHours(0, 0, 0, 0);
+      
+      return checkoutDate < today;
+    });
+
+    // Update each room that needs status change
+    const updatePromises = roomsToUpdate.map(async (room) => {
+      const updatedRoom: Room = { ...room, status: "Available" };
+      
+      await fetch(
+        `https://api.sheetbest.com/sheets/72d038c4-48d2-4f11-9db7-f6dd4c90e828/tabs/rooms/id/${room.id}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: "Available" }),
+        }
+      );
+      
+      return updatedRoom;
+    });
+
+    const updatedRooms = await Promise.all(updatePromises);
+    
+    // Return the updated room list
+    return currentRooms.map(room => {
+      const updatedRoom = updatedRooms.find(r => r.id === room.id);
+      return updatedRoom || room;
+    });
+    
+  } catch (error) {
+    console.error("Error updating room statuses:", error);
+    return currentRooms;
+  }
+};
+
 export default function RoomTable() {
   const [showForm, setShowForm] = useState(false);
   const [editingRoom, setEditingRoom] = useState<Room | null>(null);
   const [tableData, setTableData] = useState<Room[]>([]);
-  // Add a flag to trigger refresh after booking
   const [shouldRefresh, setShouldRefresh] = useState(false);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [deleteModal, setDeleteModal] = useState<{
-    isOpen: boolean;
-    roomId: string;
-    roomName: string;
-  }>({
+  const [deleteModal, setDeleteModal] = useState({
     isOpen: false,
     roomId: '',
     roomName: ''
@@ -117,33 +176,39 @@ export default function RoomTable() {
   const toggleDropdown = (id: string) => {
     setOpenDropdownId((prevId) => (prevId === id ? null : id));
   };
-
-  // Improved click outside handler
+  const BASE_URL = import.meta.env.VITE_BASE_URL
+  // Click outside handler
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Element;
       if (!target.closest('.dropdown-container')) {
         setOpenDropdownId(null);
       }
-  };
+    };
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Fetch data from rooms tab in the same Excel sheet
+  // Fetch room data and check statuses
   const getData = async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const res = await fetch('https://api.sheetbest.com/sheets/72d038c4-48d2-4f11-9db7-f6dd4c90e828/tabs/rooms');
+      const res = await fetch(`${BASE_URL}/rooms`);
       if (!res.ok) throw new Error('Failed to fetch data');
+      
       const rawData = await res.json();
-      const processedData = rawData.map((room: Room) => ({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let processedData: Room[] = rawData.map((room: any) => ({
         ...room,
         price: Number(room.price),
         status: room.status as "Available" | "Booked" | "Maintenance",
       }));
+      
+      // Check and update room statuses based on bookings
+      processedData = await checkAndUpdateRoomStatuses(processedData);
+      
       setTableData(processedData || []);
     } catch (error) {
       console.error("Error fetching rooms data:", error);
@@ -153,7 +218,7 @@ export default function RoomTable() {
     }
   };
 
-  // Refresh table after booking
+  // Refresh table when needed
   useEffect(() => {
     if (shouldRefresh) {
       getData();
@@ -161,14 +226,24 @@ export default function RoomTable() {
     }
   }, [shouldRefresh]);
 
-  
+  // Initial data load
   useEffect(() => {
     getData();
   }, []);
 
-  
+  // Periodic status check
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (tableData.length > 0) {
+        checkAndUpdateRoomStatuses(tableData).then(updatedRooms => {
+          setTableData(updatedRooms);
+        });
+      }
+    }, 60 * 60 * 1000); // Check every hour
+    
+    return () => clearInterval(interval);
+  }, [tableData]);
 
-  // Open delete confirmation modal
   const openDeleteModal = (roomId: string, roomName: string) => {
     setOpenDropdownId(null);
     setDeleteModal({
@@ -178,7 +253,6 @@ export default function RoomTable() {
     });
   };
 
-  // Close delete confirmation modal
   const closeDeleteModal = () => {
     setDeleteModal({
       isOpen: false,
@@ -187,19 +261,17 @@ export default function RoomTable() {
     });
   };
 
-  // Handle confirmed deletion
   const handleConfirmDelete = async () => {
     const { roomId } = deleteModal;
     setIsDeleting(roomId);
     
     try {
-      const response = await fetch(`https://api.sheetbest.com/sheets/72d038c4-48d2-4f11-9db7-f6dd4c90e828/tabs/rooms/id/${roomId}`, {
+      const response = await fetch(`${BASE_URL}/rooms/id/${roomId}`, {
         method: 'DELETE',
       });
 
       if (response.ok) {
         setTableData(prev => prev.filter(room => room.id !== roomId));
-        console.log('Room deleted successfully');
         closeDeleteModal();
       } else {
         throw new Error('Failed to delete room from server');
@@ -213,40 +285,35 @@ export default function RoomTable() {
     }
   };
 
-  // Fixed handleSaveForm with proper field mapping
   const handleSaveForm = async (formData: {
     name: string;
     type: string;
     price: number;
     room_no: number;
     description: string;
-    status : "Available" | "Booked" | "Maintenance";
+    status: "Available" | "Booked" | "Maintenance";
   }) => {
     try {
-      // Generate proper ID based on existing data
       const maxId = tableData.length > 0 ? Math.max(...tableData.map(item => Number(item.id))) : 0;
       const newRoomData: Room = {
         id: (maxId + 1).toString(),
         name: formData.name,
         type: formData.type,
-        room_no: formData.room_no, // <-- fixed typo (comma, not semicolon)
+        room_no: formData.room_no,
         price: formData.price,
         description: formData.description,
         status: formData.status,
       };
 
-      const response = await fetch('https://api.sheetbest.com/sheets/72d038c4-48d2-4f11-9db7-f6dd4c90e828/tabs/rooms', {
+      const response = await fetch(`${BASE_URL}/rooms`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newRoomData),
       });
 
       if (response.ok) {
-        setTableData((prevData) => [...prevData, newRoomData]);
+        setTableData((prevData) => [newRoomData, ...prevData]);
         setShowForm(false);
-        console.log('Room added successfully');
       } else {
         throw new Error('Failed to save room');
       }
@@ -256,13 +323,11 @@ export default function RoomTable() {
     }
   };
 
-  // Handle edit room
   const handleEditRoom = (room: Room) => {
     setEditingRoom(room);
     setOpenDropdownId(null);
   };
 
-  // Handle update room
   const handleUpdateRoom = async (formData: {
     name: string;
     type: string;
@@ -277,16 +342,14 @@ export default function RoomTable() {
         name: formData.name,
         type: formData.type,
         price: formData.price,
-        status: formData.status, // <-- make sure status is updated
+        status: formData.status,
       };
 
       const response = await fetch(
-        `https://api.sheetbest.com/sheets/72d038c4-48d2-4f11-9db7-f6dd4c90e828/tabs/rooms/id/${editingRoom.id}`,
+        `${BASE_URL}/rooms/id/${editingRoom.id}`,
         {
           method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(updatedRoomData),
         }
       );
@@ -298,7 +361,6 @@ export default function RoomTable() {
           )
         );
         setEditingRoom(null);
-        console.log("Room updated successfully");
       } else {
         throw new Error("Failed to update room");
       }
@@ -319,9 +381,7 @@ export default function RoomTable() {
           <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
             All Rooms
           </h2>
-          {error && (
-            <p className="text-red-500 text-sm mt-1">{error}</p>
-          )}
+          {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
         </div>
         
         <div className="flex gap-2">
@@ -367,40 +427,22 @@ export default function RoomTable() {
               <Table>
                 <TableHeader className="border-b border-gray-100 dark:border-white/[0.05] sticky top-0 bg-white dark:bg-gray-900 z-20">
                   <TableRow>
-                    <TableCell
-                      isHeader
-                      className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap"
-                    >
+                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">
                       ROOM NO
                     </TableCell>
-                    <TableCell
-                      isHeader
-                      className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap"
-                    >
+                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">
                       NAME
                     </TableCell>
-                    <TableCell
-                      isHeader
-                      className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap"
-                    >
+                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">
                       TYPE
                     </TableCell>
-                    <TableCell
-                      isHeader
-                      className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap"
-                    >
+                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">
                       PRICE (PKR)
                     </TableCell>
-                    <TableCell
-                      isHeader
-                      className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap"
-                    >
+                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap">
                       AVAILABILITY
                     </TableCell>
-                    <TableCell
-                      isHeader
-                      className="px-5 py-3 font-medium text-gray-500 text-end text-theme-xs dark:text-gray-400 whitespace-nowrap"
-                    >
+                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-end text-theme-xs dark:text-gray-400 whitespace-nowrap">
                       ACTIONS
                     </TableCell>
                   </TableRow>
@@ -462,7 +504,7 @@ export default function RoomTable() {
                                     Book
                                   </Link>
                                 ) : (
-                                  <div className="block w-full px-4 py-2 text-sm text-gray-400 dark:text-gray-500 cursor-not-allowed">
+                                  <div className="block w-full text-left px-4 py-2 text-sm text-gray-400 dark:text-gray-500 cursor-not-allowed">
                                     {room.status}
                                   </div>
                                 )}
@@ -494,7 +536,6 @@ export default function RoomTable() {
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
       <DeleteConfirmationModal
         isOpen={deleteModal.isOpen}
         roomName={deleteModal.roomName}
@@ -506,4 +547,3 @@ export default function RoomTable() {
     </>
   );
 }
-
